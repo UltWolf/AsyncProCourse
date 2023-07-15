@@ -10,11 +10,11 @@ namespace _2.Benchmark.Benchmarks
     //Just which version of framework we need to use for test
     [SimpleJob(runtimeMoniker: RuntimeMoniker.Net70)]
     [SimpleJob(runtimeMoniker: RuntimeMoniker.Net50)]
-    [SimpleJob(runtimeMoniker: RuntimeMoniker.NetCoreApp20)]
-    [SimpleJob(runtimeMoniker: RuntimeMoniker.NetCoreApp21)]
+    //[SimpleJob(runtimeMoniker: RuntimeMoniker.NetCoreApp20)]
+    //[SimpleJob(runtimeMoniker: RuntimeMoniker.NetCoreApp21)]
     // for finding memory allocations, if we want to find leaks, need to use NativeMemoryDiagnoser
     [MemoryDiagnoser]
-    //For find some lock problem, and completed work items
+    //For find some lock problem, and completed work items, support from 3.0
     [ThreadingDiagnoser]
     public class MD5vsSHA256
     {
@@ -24,13 +24,51 @@ namespace _2.Benchmark.Benchmarks
         [GlobalSetup]
         public void Setup()
         {
+
             data = new byte[1000];
             new Random(42).NextBytes(data);
         }
         [Benchmark]
-        public byte[] Sha256() => SHA256.ComputeHash(data);
-        [Benchmark]
-        public byte[] Md5() => md5.ComputeHash(data);
+        public void Sha256()
+        {
+            var count = 10;
+            var locked = new object();
+            using var e = new CountdownEvent(count);
+            for (var i = 0; i < count; i++)
+            {
+                ThreadPool.QueueUserWorkItem(m =>
+                {
+                    lock (locked)
+                    {
+                        // SHA256.ComputeHash(data);
 
+                        ((CountdownEvent)m).Signal();
+                    }
+                });
+            }
+            e.Wait();
+
+        }
+        [Benchmark]
+        public void Md5()
+        {
+            var count = 10;
+            var locked = new object();
+            using var e = new CountdownEvent(count);
+            for (var i = 0; i < count; i++)
+            {
+                ThreadPool.QueueUserWorkItem(m =>
+                {
+                    lock (locked)
+                    {
+                        //md5.ComputeHash(data);
+                        ((CountdownEvent)m).Signal();
+                    }
+                });
+            }
+            e.Wait();
+        }
     }
+
+
 }

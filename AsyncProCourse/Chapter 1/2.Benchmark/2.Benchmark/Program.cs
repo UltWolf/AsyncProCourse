@@ -8,6 +8,7 @@ namespace _2.Benchmark
         static void Main(string[] args)
         {
             BenchmarkRunner.Run<MD5vsSHA256>();
+            // BenchmarkRunner.Run(typeof(NugetSample));
         }
     }
 }
